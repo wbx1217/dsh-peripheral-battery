@@ -1,0 +1,82 @@
+{
+  "name": "dsh-peripheral-battery",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "在 DSH 里查看本机无线外设电量（2.4G HID + BLE + 用户适配器），并在快没电时发 Windows 系统通知。",
+  "license": "MIT",
+  "author": "wbx1217",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wbx1217/dsh-peripheral-battery.git"
+  },
+  "homepage": "https://github.com/wbx1217/dsh-peripheral-battery#readme",
+  "bugs": {
+    "url": "https://github.com/wbx1217/dsh-peripheral-battery/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=24.9.0",
+    "dsh": ">=0.2.2-rc.5"
+  },
+  "os": [
+    "win32"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "battery",
+    "wireless",
+    "hid",
+    "peripheral"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "scripts": {
+    "check:adapters": "node scripts/check-adapters.mjs",
+    "new:adapter": "node scripts/new-adapter.mjs",
+    "test:js": "node --test tests/*.test.mjs"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "daemon-client.js",
+    "source-ledger.js",
+    "device-view.js",
+    "adapter-catalog.js",
+    "LICENSE",
+    "CHANGELOG.md",
+    "cordis.patch.yml",
+    "bin",
+    "adapters",
+    "protocols",
+    "templates",
+    "scripts/check-adapters.mjs",
+    "scripts/new-adapter.mjs",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "scripts/toast.ps1"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml",
+      "platforms": [
+        "win32"
+      ]
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout"
+      ]
+    }
+  }
+}

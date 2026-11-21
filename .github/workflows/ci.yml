@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Syntax checks
+        shell: pwsh
+        run: |
+          node --check index.js
+          node --check client.js
+          node --check daemon-client.js
+          node --check source-ledger.js
+          node --check device-view.js
+          node --check adapter-catalog.js
+
+      - name: JS tests
+        shell: pwsh
+        run: npm run test:js
+
+      - name: Adapter validation
+        shell: pwsh
+        run: npm run check:adapters
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust tests
+        shell: pwsh
+        working-directory: rust
+        run: cargo test
+
+      - name: Rust formatting
+        shell: pwsh
+        working-directory: rust
+        run: cargo fmt --check
+
+      - name: Package dry run
+        shell: pwsh
+        run: npm pack --dry-run

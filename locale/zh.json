@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "无线外设电量",
+    "description": "仅 Windows。在 DSH 内读取本机无线外设的电量：2.4G 键鼠/耳机走私有 HID 协议，BLE 蓝牙设备走 GATT Battery Service 或 Windows 已知电量；提供 agent 可调用的工具，并在跌破阈值时发 Windows 系统通知。未支持的型号可在应用内适配器市场查找，或让 agent 通过发现/抓包/保存适配器流程补齐。",
+    "detail": "docs/DETAIL.zh.md"
+  }
+}

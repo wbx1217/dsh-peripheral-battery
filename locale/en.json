@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Peripheral battery",
+    "description": "Windows only. Reads the battery level of local wireless peripherals inside DSH: 2.4 GHz devices over vendor HID protocols, and Bluetooth LE devices over the GATT Battery Service or the battery Windows already knows. Exposes tools to the agent and sends a Windows notification when a device drops below the configured threshold. Unsupported models can be found in the in-app adapter market or adapted through the agent's detect/probe/save tools.",
+    "detail": "docs/DETAIL.md"
+  }
+}

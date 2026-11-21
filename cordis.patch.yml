@@ -1,0 +1,4 @@
+- insert:
+    - id: peripheral-battery
+      name: dsh-peripheral-battery
+      config: {}
