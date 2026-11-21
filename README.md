@@ -325,23 +325,17 @@ scripts/toast.ps1 Windows Toast（PowerShell 5.1 + WinRT）
 - 如果未来复制任何 GPLv3 代码，整个衍生分发需要按 GPLv3 处理；当前策略是重写协议实现。
 - 隐私：插件默认只读本机 HID/蓝牙/Phone Link 文件；网络访问仅用于拉取社区适配器索引和源码，不上传设备数据。
 
-## DSH 官方市场状态
+## DSH 插件市场状态
 
-当前安装的 DSH `0.2.2-rc.5`：
+DeepSeek 官方 on-demand 目录编译在 `@deepseek-ai/dsh-official-bundles` 里，随 DSH 发行版更新，当前没有第三方自助提交入口。
 
-- **Discover 只支持用户自定义插件索引**，没有可由第三方自行提交的官方索引；
-- “官方 on-demand 插件”目录编译在 `@deepseek-ai/dsh-official-bundles` 里，随 DSH 发行版更新；
-- 因此这个包已经按 bundle 要求准备好，但**不能仅靠本机操作直接上架官方目录**，需要 DSH 官方/发行渠道接收。
+社区 **开放插件市场**（Open Plugin Market，独立项目，不是 DeepSeek 官方）：
 
-本包已具备的发布形态：
+- 索引：`https://dshopen.org/index.json`
+- 收录申请：https://github.com/polang233/dsh-plugin-index/issues/new?template=plugin-add.yml
+- 要求：公开源码、可安装的 npm 版本或固定 Git 提交、LICENSE、`dsh.bundle.patch`、安全审查
 
-- `dsh.bundle.patch`、`dsh.client`、`dsh.bundle.platforms`；
-- `locale/en.json`、`locale/zh.json` 的 `meta.title/description/detail`；
-- 中英单图详情页 `docs/DETAIL*.md` + `docs/preview.svg`；
-- `icon.svg`、MIT `LICENSE`、`engines.dsh`；
-- `private` 已移除，`publishConfig.access = public`。
-
-自托管/内测可以先走自定义索引；官方目录需要 DSH 团队把包名加入 `dsh-official-bundles` 的 on-demand 列表并随版本发布。
+本仓库：https://github.com/wbx1217/dsh-peripheral-battery
 
 ## 版本
 

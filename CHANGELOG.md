@@ -14,6 +14,7 @@
 
 ### 安全与稳定性
 
+- 所有插件 Web 路由接入 `connection.requestRejection`；未认证或 Host/Origin 不受信任时直接拒绝。
 - adapter 沙箱使用沙箱内部 `defineAdapter`/`console`，`io` 通过 JSON 桥传递，不把宿主函数交给适配器。
 - daemon stdin 错误处理、RPC 超时、HID session 超时关闭。
 - 轮询快照原子发布、pending refresh、beta builtIn 全量判断。
