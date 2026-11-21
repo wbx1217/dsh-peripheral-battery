@@ -91,8 +91,6 @@ tar -xzf dsh-peripheral-battery-0.1.0.tgz
 
 设置也可以让 agent 改：`battery_config`，或打开 **设置 → 外设电量**。
 
-截图/GIF 制作流程见 [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md)。
-
 ## 没有对应设备怎么办
 
 先看 **设置 → 外设电量 → 复制诊断**，它会把问题定位到数据源，而不是只给一个空列表。
