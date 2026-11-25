@@ -18,6 +18,7 @@
 - adapter 沙箱使用沙箱内部 `defineAdapter`/`console`，`io` 通过 JSON 桥传递，不把宿主函数交给适配器。
 - daemon stdin 错误处理、RPC 超时、HID session 超时关闭。
 - 轮询快照原子发布、pending refresh、beta builtIn 全量判断。
+- 休眠设备自动短间隔重试：页面打开时，设备唤醒后无需手动刷新，约 5–10 秒内恢复读数。
 - 市场流式限长、targetFile 去冲突、minPlugin 校验。
 
 ### 文档与测试
