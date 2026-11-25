@@ -1674,7 +1674,6 @@ export function apply(ctx, config) {
     daemonVersion: '',
     rev: 0,
     sources: createSourceLedger(),
-    clientSeenAt: 0,
   }
 
   // 长轮询等待者：快照一发布就唤醒客户端，不再按固定间隔轮询。
@@ -1829,56 +1828,19 @@ export function apply(ctx, config) {
     return registryList(currentRawDevices())
   }
 
-  // 休眠设备不会触发 WM_DEVICECHANGE；短间隔重试，唤醒后无需手动刷新。
-  let asleepRetryTimer = null
-  let asleepRetryDelay = 5_000
-
-  function clearAsleepRetry() {
-    if (asleepRetryTimer) {
-      clearTimeout(asleepRetryTimer)
-      asleepRetryTimer = null
-    }
-  }
-
-  function scheduleAsleepRetry(snapshot) {
-    const hasAsleep = Boolean(
-      snapshot?.devices?.some((device) => device.visible !== false && device.status === 'asleep'),
-    )
-    if (!hasAsleep) {
-      clearAsleepRetry()
-      asleepRetryDelay = 5_000
-      return
-    }
-    // 页面关闭后不再为休眠设备保持 daemon / 轮询；下一次打开页面会重新启动。
-    if (!state.clientSeenAt || Date.now() - state.clientSeenAt > 5 * 60_000) {
-      clearAsleepRetry()
-      asleepRetryDelay = 5_000
-      return
-    }
-    if (asleepRetryTimer) return
-    const delay = asleepRetryDelay
-    asleepRetryDelay = Math.min(asleepRetryDelay * 2, 10_000)
-    asleepRetryTimer = setTimeout(() => {
-      asleepRetryTimer = null
-      void poll(true, { adaptersOnly: true })
-    }, delay)
-  }
-
-  function poll(force = false, options = {}) {
+  function poll(force = false) {
     if (state.inflight) {
       if (force) state.pendingRefresh = true
       return state.inflight
     }
-    const adaptersOnly = options.adaptersOnly === true
     const intervalMs = settings.intervalMinutes * 60_000
     if (!force && state.snapshot && Date.now() - state.lastPolledAt < intervalMs) {
-      scheduleAsleepRetry(state.snapshot)
       return Promise.resolve(state.snapshot)
     }
     state.inflight = (async () => {
       state.refreshing = true
-      const nextRaw = adaptersOnly ? new Map(state.raw) : new Map()
-      let nextBase = adaptersOnly ? { ...state.base, generatedAtMs: Date.now() } : {}
+      const nextRaw = new Map()
+      let nextBase = {}
       try {
         if (!state.daemonVersion) {
           try {
@@ -1887,93 +1849,84 @@ export function apply(ctx, config) {
             state.daemonVersion = '0.1.0'
           }
         }
-        if (!adaptersOnly) {
-          nextBase = {
-            schema: 1,
-            version: state.daemonVersion,
-            sidecarVersion: state.daemonVersion,
-            generatedAtMs: Date.now(),
-          }
-          try {
-            const xinput = await getDaemon().request('xinput', {})
-            const devices = xinput.devices || []
-            for (const device of devices) nextRaw.set(device.key, device)
-            state.sources.set('xinput', { count: devices.length, error: null })
-          } catch (error) {
-            state.sources.set('xinput', { count: 0, error: String(error?.message ?? error) })
-            // 没有 XInput 手柄不影响 HID / BLE 数据源。
-          }
-        } else {
-          // 轻量重试只重读适配器，删掉旧适配器条目，避免已移除设备残留。
-          for (const adapter of adapterState.adapters) nextRaw.delete(adapter.id)
+        nextBase = {
+          schema: 1,
+          version: state.daemonVersion,
+          sidecarVersion: state.daemonVersion,
+          generatedAtMs: Date.now(),
+        }
+        try {
+          const xinput = await getDaemon().request('xinput', {})
+          const devices = xinput.devices || []
+          for (const device of devices) nextRaw.set(device.key, device)
+          state.sources.set('xinput', { count: devices.length, error: null })
+        } catch (error) {
+          state.sources.set('xinput', { count: 0, error: String(error?.message ?? error) })
+          // 没有 XInput 手柄不影响 HID / BLE 数据源。
         }
         await readAdapterDevices((device) => {
           nextRaw.set(device.key, device)
         })
-        if (!adaptersOnly) {
-          try {
-            const generic = await getDaemon().request('genericBattery', {})
-            for (const device of generic.devices || []) {
-              if (adapterClaimsDevice(device, nextRaw)) continue
-              nextRaw.set(device.key, device)
-            }
-            state.sources.set('generic', {
-              enumerated: Number(generic.diagnostics?.enumerated) || 0,
-              matched: Number(generic.diagnostics?.matched) || 0,
-              error: generic.diagnostics?.error || null,
-            })
-          } catch (error) {
-            state.sources.set('generic', {
-              enumerated: 0,
-              matched: 0,
-              error: String(error?.message ?? error),
-            })
-            // 旧 daemon 或不支持标准 HID Battery：不影响适配器/BLE。
+        try {
+          const generic = await getDaemon().request('genericBattery', {})
+          for (const device of generic.devices || []) {
+            if (adapterClaimsDevice(device, nextRaw)) continue
+            nextRaw.set(device.key, device)
           }
-          const ble = await ensureBle(force)
-          for (const device of ble) nextRaw.set(device.key, device)
-          state.sources.set('ble', {
-            gatt: Number(bleState.diagnostics?.gatt) || 0,
-            windows: Number(bleState.diagnostics?.windows) || 0,
-            fastpair: Number(bleState.diagnostics?.fastpair) || 0,
-            fastpairAdvertisements: Number(bleState.diagnostics?.fastpairAdvertisements) || 0,
-            fastpairError: bleState.diagnostics?.fastpairError || null,
-            count: ble.length,
-            error: bleState.error,
+          state.sources.set('generic', {
+            enumerated: Number(generic.diagnostics?.enumerated) || 0,
+            matched: Number(generic.diagnostics?.matched) || 0,
+            error: generic.diagnostics?.error || null,
           })
-          try {
-            const phone = await getDaemon().request('phonelink', {})
-            const devices = phone.devices || []
-            for (const device of devices) nextRaw.set(device.key, device)
-            state.sources.set('phonelink', {
-              fileFound: phone.diagnostics?.fileFound === true,
-              ageSecs: typeof phone.diagnostics?.ageSecs === 'number'
-                ? phone.diagnostics.ageSecs
-                : null,
-              count: devices.length,
-              error: phone.diagnostics?.error || null,
-            })
-          } catch (error) {
-            state.sources.set('phonelink', {
-              fileFound: false,
-              ageSecs: null,
-              count: 0,
-              error: String(error?.message ?? error),
-            })
-            // 没有 Phone Link 或旧 daemon：不影响其他数据源。
-          }
+        } catch (error) {
+          state.sources.set('generic', {
+            enumerated: 0,
+            matched: 0,
+            error: String(error?.message ?? error),
+          })
+          // 旧 daemon 或不支持标准 HID Battery：不影响适配器/BLE。
+        }
+        const ble = await ensureBle(force)
+        for (const device of ble) nextRaw.set(device.key, device)
+        state.sources.set('ble', {
+          gatt: Number(bleState.diagnostics?.gatt) || 0,
+          windows: Number(bleState.diagnostics?.windows) || 0,
+          fastpair: Number(bleState.diagnostics?.fastpair) || 0,
+          fastpairAdvertisements: Number(bleState.diagnostics?.fastpairAdvertisements) || 0,
+          fastpairError: bleState.diagnostics?.fastpairError || null,
+          count: ble.length,
+          error: bleState.error,
+        })
+        try {
+          const phone = await getDaemon().request('phonelink', {})
+          const devices = phone.devices || []
+          for (const device of devices) nextRaw.set(device.key, device)
+          state.sources.set('phonelink', {
+            fileFound: phone.diagnostics?.fileFound === true,
+            ageSecs: typeof phone.diagnostics?.ageSecs === 'number'
+              ? phone.diagnostics.ageSecs
+              : null,
+            count: devices.length,
+            error: phone.diagnostics?.error || null,
+          })
+        } catch (error) {
+          state.sources.set('phonelink', {
+            fileFound: false,
+            ageSecs: null,
+            count: 0,
+            error: String(error?.message ?? error),
+          })
+          // 没有 Phone Link 或旧 daemon：不影响其他数据源。
         }
         // 所有源写进临时 Map 后再替换，避免分步 publish 把设备闪成“已拔出”。
         state.raw = nextRaw
         state.base = nextBase
         state.error = null
         publishSnapshot()
-        scheduleAsleepRetry(state.snapshot)
         if (state.snapshot) checkAlerts(state.snapshot)
       } catch (error) {
         state.error = String(error?.message ?? error)
         publishSnapshot()
-        scheduleAsleepRetry(state.snapshot)
       } finally {
         state.refreshing = false
         state.lastPolledAt = Date.now()
@@ -2758,8 +2711,6 @@ export function apply(ctx, config) {
             })
             return
           }
-          state.clientSeenAt = Date.now()
-          scheduleAsleepRetry(state.snapshot)
           return route.handler(request, response)
         },
       }
@@ -2778,8 +2729,6 @@ export function apply(ctx, config) {
               },
             )
           }
-          state.clientSeenAt = Date.now()
-          scheduleAsleepRetry(state.snapshot)
           return route.resource(request, peer)
         },
       }
@@ -3189,7 +3138,6 @@ export function apply(ctx, config) {
   }
   timerDispose = ctx.timer.interval(tick, 30_000)
   ctx.effect(() => () => {
-    clearAsleepRetry()
     timerDispose?.()
     timerDispose = null
   })
